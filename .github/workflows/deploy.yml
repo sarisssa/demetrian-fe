@@ -20,19 +20,15 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      # Deploy to the Droplet using Rsync
-      - name: Deploy to Droplet via SSH
-        run: |
-          ls -a
-          cwd
-
       - name: Install dependencies
         run: npm install --production
 
       - name: Run build
         run: npm run build
 
-      # rsync -avz --delete --exclude='.next' --exclude='node_modules' ./ root@167.71.188.90:/var/www/nextjs-app/
+      # Deploy to the Droplet using Rsync
+      - name: Deploy to Droplet via SSH
+        run: rsync -avz --delete ./dist root@167.71.188.90:/var/www/nextjs-app/
 
       # Restart the app on the Droplet
       - name: SSH into Droplet and build project
