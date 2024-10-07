@@ -23,18 +23,22 @@ jobs:
       # Deploy to the Droplet using Rsync
       - name: Deploy to Droplet via SSH
         run: |
-          rsync -avz --delete --exclude='.next' --exclude='node_modules' ./ root@167.71.188.90:/var/www/nextjs-app/
+          ls -a
+          cwd
 
-      # Install dependencies, build, and restart the app on the Droplet
+      - name: Install dependencies
+        run: npm install --production
+
+      - name: Run build
+        run: npm run build
+
+      # rsync -avz --delete --exclude='.next' --exclude='node_modules' ./ root@167.71.188.90:/var/www/nextjs-app/
+
+      # Restart the app on the Droplet
       - name: SSH into Droplet and build project
         run: |
           ssh root@167.71.188.90 << 'EOF'
             cd /var/www/nextjs-app
-            echo "Installing dependencies..."
-            npm install --production
-
-            echo "Building Next.js app..."
-            npm run build
 
             echo "Restarting app using pm2..."
             pm2 restart nextjs-app || pm2 start npm --name "nextjs-app" -- start
