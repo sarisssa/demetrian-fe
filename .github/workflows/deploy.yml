@@ -14,30 +14,70 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Set up SSH Agent to connect to your Droplet
-      - name: Set up SSH agent
-        uses: webfactory/ssh-agent@v0.9.0
+      - name: Log in to Docker Hub
+        uses: docker/login-action@master
         with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Install dependencies
-        run: npm install
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@master
+        with:
+          images: sarisssa/demetrian
 
-      - name: Run build
-        run: npm run build
+      - name: Build and push Docker image
+        id: push
+        uses: docker/build-push-action@master
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
 
-      # Deploy to the Droplet using Rsync
-      - name: Deploy to Droplet via SSH
-        run: rsync -avz --delete ./dist root@167.71.188.90:/var/www/nextjs-app/
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-name: docker.io/sarisssa/demetrian
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
 
-      # Restart the app on the Droplet
-      - name: SSH into Droplet and build project
-        run: |
-          ssh root@167.71.188.90 << 'EOF'
-            cd /var/www/nextjs-app
+      # - name: Install dependencies
+      #   run: npm install
 
-            echo "Restarting app using pm2..."
-            pm2 restart nextjs-app || pm2 start npm --name "nextjs-app" -- start
+      # - name: Run build
+      #   run: npm run build
 
-            echo "Deployment complete!"
-          EOF
+      # - name: Set up SSH
+      #   uses: appleboy/ssh-action@master
+      #   with: |
+      #     host: ${{ secrets.DROPLET_IP }}
+      #     username: ${{ secrets.DROPLET_USER }}
+      #     key: ${{ secrets.DROPLET_SSH_KEY }}
+      #     script: |
+      #       cd /path/to/your/app
+      #       git pull origin main
+      #       pm2 restart all # If using pm2, otherwise your service restart command
+
+      # # Set up SSH Agent to connect to your Droplet
+      # - name: Set up SSH agent
+      #   uses: webfactory/ssh-agent@v0.9.0
+      #   with:
+      #     ssh-private-key: ${{ secrets.DROPLET_SSH_KEY }}
+
+      # # Deploy to the Droplet using Rsync
+      # - name: Deploy to Droplet via SSH
+      #   run: rsync -avz --delete ./dist ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_IP }}:/var/www/nextjs-app/
+
+      # # Restart the app on the Droplet
+      # - name: SSH into Droplet and build project
+      #   run: |
+      #     ssh root@167.71.188.90 << 'EOF'
+      #       cd /var/www/nextjs-app
+
+      #       echo "Restarting app using pm2..."
+      #       pm2 restart nextjs-app || pm2 start npm --name "nextjs-app" -- start
+
+      #       echo "Deployment complete!"
+      #     EOF
