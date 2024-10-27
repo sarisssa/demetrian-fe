@@ -49,6 +49,7 @@ jobs:
 
   deployApp:
     runs-on: ubuntu-latest
+    needs: deployImage
     steps:
       # Set up SSH Agent to connect to your Droplet
       - name: Set up SSH agent
@@ -66,3 +67,5 @@ jobs:
             docker rm my_app_container || true
             docker run -d --name my_app_container sarisssa/demetrian:${{ steps.meta.outputs.tags }}
           EOF
+
+# git add . && git commit -m 'pipeline changes' && git push
