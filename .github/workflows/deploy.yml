@@ -49,19 +49,20 @@ jobs:
 
   deployApp:
     runs-on: ubuntu-latest
+    steps:
       # Set up SSH Agent to connect to your Droplet
       - name: Set up SSH agent
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.DROPLET_SSH_KEY }}
 
-    # Pull latest image in Digital Ocean 
-    - name: Deploy to Droplet via SSH
-      run: |
-        ssh -o StrictHostKeyChecking=no root@${{ secrets.DROPLET_IP }} << 'EOF'
-          docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
-          docker pull sarisssa/demetrian:${{ steps.meta.outputs.tags }}
-          docker stop my_app_container || true
-          docker rm my_app_container || true
-          docker run -d --name my_app_container sarisssa/demetrian:${{ steps.meta.outputs.tags }}
-        EOF
+      # Pull latest image in Digital Ocean
+      - name: Deploy to Droplet via SSH
+        run: |
+          ssh -o StrictHostKeyChecking=no root@${{ secrets.DROPLET_IP }} << 'EOF'
+            docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
+            docker pull sarisssa/demetrian:${{ steps.meta.outputs.tags }}
+            docker stop my_app_container || true
+            docker rm my_app_container || true
+            docker run -d --name my_app_container sarisssa/demetrian:${{ steps.meta.outputs.tags }}
+          EOF
