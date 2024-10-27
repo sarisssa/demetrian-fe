@@ -9,8 +9,6 @@ on:
 jobs:
   deployImage:
     runs-on: ubuntu-latest
-    outputs:
-      imageTags: ${{ steps.meta.outputs.tags }}
     permissions:
       packages: write
       contents: read
@@ -65,9 +63,12 @@ jobs:
           ssh -o StrictHostKeyChecking=no root@${{ secrets.DROPLET_IP }} << 'EOF'
             docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
             docker pull sarisssa/demetrian:main
-            docker stop my_app_container || true
-            docker rm my_app_container || true
-            docker run -d --name my_app_container sarisssa/demetrian:main
+            docker stop demetrian-fe || true
+            docker rm demetrian-fe || true
+            docker run -d --name demetrian-fe -p 3000:3000 sarisssa/demetrian:main
           EOF
 
 # git add . && git commit -m 'pipeline changes' && git push
+# Change Droplet IP everytime we create the resource
+
+# docker run -d --name test  -p 3000:3000 sarisssa/demetrian:main
