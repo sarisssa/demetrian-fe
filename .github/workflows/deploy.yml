@@ -1,4 +1,4 @@
-name: Deploy to DigitalOcean Droplet
+name: Deploy Image + Droplet Pull from Dockerhub
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
       - main
 
 jobs:
-  deploy:
+  deployImage:
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -47,41 +47,21 @@ jobs:
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
 
-      # - name: Install dependencies
-      #   run: npm install
+  deployApp:
+    runs-on: ubuntu-latest
+      # Set up SSH Agent to connect to your Droplet
+      - name: Set up SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DROPLET_SSH_KEY }}
 
-      # - name: Run build
-      #   run: npm run build
-
-      # - name: Set up SSH
-      #   uses: appleboy/ssh-action@master
-      #   with: |
-      #     host: ${{ secrets.DROPLET_IP }}
-      #     username: ${{ secrets.DROPLET_USER }}
-      #     key: ${{ secrets.DROPLET_SSH_KEY }}
-      #     script: |
-      #       cd /path/to/your/app
-      #       git pull origin main
-      #       pm2 restart all # If using pm2, otherwise your service restart command
-
-      # # Set up SSH Agent to connect to your Droplet
-      # - name: Set up SSH agent
-      #   uses: webfactory/ssh-agent@v0.9.0
-      #   with:
-      #     ssh-private-key: ${{ secrets.DROPLET_SSH_KEY }}
-
-      # # Deploy to the Droplet using Rsync
-      # - name: Deploy to Droplet via SSH
-      #   run: rsync -avz --delete ./dist ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_IP }}:/var/www/nextjs-app/
-
-      # # Restart the app on the Droplet
-      # - name: SSH into Droplet and build project
-      #   run: |
-      #     ssh root@167.71.188.90 << 'EOF'
-      #       cd /var/www/nextjs-app
-
-      #       echo "Restarting app using pm2..."
-      #       pm2 restart nextjs-app || pm2 start npm --name "nextjs-app" -- start
-
-      #       echo "Deployment complete!"
-      #     EOF
+    # Pull latest image in Digital Ocean 
+    - name: Deploy to Droplet via SSH
+      run: |
+        ssh -o StrictHostKeyChecking=no root@${{ secrets.DROPLET_IP }} << 'EOF'
+          docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
+          docker pull sarisssa/demetrian:${{ steps.meta.outputs.tags }}
+          docker stop my_app_container || true
+          docker rm my_app_container || true
+          docker run -d --name my_app_container sarisssa/demetrian:${{ steps.meta.outputs.tags }}
+        EOF
